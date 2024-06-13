@@ -1,0 +1,309 @@
+
+2024-06-13T08:49:32.568056
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: Structure
+1 laravel-product-management
+2 app
+3 Models
+4 Product.php
+5 ...
+6 Http
+7 Controllers
+8 ProductController.php
+9 ...
+10 Requests
+11 ProductRequest.php
+12 ...
+13 Tests
+14 Feature
+15 ProductTest.php
+16 ...
+17 Unit
+18 ProductUnitTest.php
+19 ...
+20 routes
+21 web.php
+22 database
+23 migrations
+24 create_products_table.php
+25 ...
+26 seeds
+27 ProductSeeder.php
+28 ...
+29 resources
+30 views
+31 products
+32 index.blade.php
+33 ...
+34 config
+35 database.php
+36 ...
+37 composer.json
+38 package.json
+39 README.md
+
+File: composer.json
+1 {
+2     "name": "laravel/laravel",
+3     "description": "The Laravel Framework.",
+4     "keywords": ["framework", "laravel"],
+5     "license": "MIT",
+6     "type": "project",
+7     "require": {
+8         "php": "^7.2.5",
+9         "fideloper/proxy": "^4.2",
+10         "fruitcake/laravel-cors": "^2.0",
+11         "guzzlehttp/guzzle": "^7.0.1",
+12         "laravel/framework": "^8.40",
+13         "laravel/tinker": "^2.5"
+14     },
+15     "require-dev": {
+16         "facade/ignition": "^2.5",
+17         "fakerphp/faker": "^1.9.1",
+18         "laravel/sail": "^1.0.1",
+19         "mockery/mockery": "^1.4.2",
+20         "nunomaduro/collision": "^5.0",
+21         "phpunit/phpunit": "^9.3.3"
+22     },
+23     "config": {
+24         "optimize-autoloader": true,
+25         "preferred-install": "dist",
+26         "sort-packages": true
+27     },
+28     "extra": {
+29         "laravel": {
+30             "dont-discover": []
+31         }
+32     },
+33     "autoload": {
+34         "psr-4": {
+35             "App\\": "app/",
+36             "Database\\Factories\\": "database/factories/",
+37             "Database\\Seeders\\": "database/seeders/"
+38         }
+39     },
+40     "autoload-dev": {
+41         "psr-4": {
+42             "Tests\\": "tests/"
+43         }
+44     },
+45     "minimum-stability": "dev",
+46     "prefer-stable": true,
+47     "scripts": {
+48         "post-autoload-dump": [
+49             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+50             "@php artisan package:discover --ansi"
+51         ]
+52     }
+53 }
+
+File: app/Models/Product.php
+1 namespace App\Models;
+2 
+3 use Illuminate\Database\Eloquent\Model;
+4 
+5 class Product extends Model
+6 {
+7     protected $fillable = [
+8         'name',
+9         'description',
+10         'price',
+11     ];
+12 }
+
+File: app/Http/Controllers/ProductController.php
+1 namespace App\Http\Controllers;
+2 
+3 use App\Models\Product;
+4 use Illuminate\Http\Request;
+5 
+6 class ProductController extends Controller
+7 {
+8     public function index()
+9     {
+10         $products = Product::all();
+11         return view('products.index', compact('products'));
+12     }
+13 
+14     public function store(Request $request)
+15     {
+16         $product = new Product();
+17         $product->name = $request->input('name');
+18         $product->description = $request->input('description');
+19         $product->price = $request->input('price');
+20         $product->save();
+21         return redirect()->route('products.index');
+22     }
+23 }
+
+File: app/Http/Requests/ProductRequest.php
+1 namespace App\Http\Requests;
+2 
+3 use Illuminate\Foundation\Http\FormRequest;
+4 
+5 class ProductRequest extends FormRequest
+6 {
+7     public function rules()
+8     {
+9         return [
+10             'name' => 'required|string',
+11             'description' => 'required|string',
+12             'price' => 'required|numeric',
+13         ];
+14     }
+15 }
+
+File: database/migrations/create_products_table.php
+1 use Illuminate\Database\Migrations\Migration;
+2 use Illuminate\Database\Schema\Blueprint;
+3 
+4 class CreateProductsTable extends Migration
+5 {
+6     public function up()
+7     {
+8         Schema::create('products', function (Blueprint $table) {
+9             $table->id();
+10             $table->string('name');
+11             $table->string('description');
+12             $table->decimal('price', 10, 2);
+13             $table->timestamps();
+14         });
+15     }
+16 
+17     public function down()
+18     {
+19         Schema::dropIfExists('products');
+20     }
+21 }
+
+File: database/seeds/ProductSeeder.php
+1 use App\Models\Product;
+2 use Illuminate\Database\Seeder;
+3 
+4 class ProductSeeder extends Seeder
+5 {
+6     public function run()
+7     {
+8         factory(Product::class, 10)->create();
+9     }
+10 }
+
+File: resources/views/products/index.blade.php
+1 <h1>Products</h1>
+2 
+3 <ul>
+4     @foreach($products as $product)
+5         <li>
+6             {{ $product->name }} ({{ $product->price }})
+7         </li>
+8     @endforeach
+9 </ul>
+10 
+11 <form action="{{ route('products.store') }}" method="post">
+12     @csrf
+13     <label for="name">Name:</label>
+14     <input type="text" id="name" name="name"><br><br>
+15     <label for="description">Description:</label>
+16     <input type="text" id="description" name="description"><br><br>
+17     <label for="price">Price:</label>
+18     <input type="number" id="price" name="price"><br><br>
+19     <input type="submit" value="Create Product">
+20 </form>
+
+File: routes/web.php
+1 Route::get('/products', 'ProductController@index');
+2 Route::post('/products', 'ProductController@store');
+
+File: tests/Feature/ProductTest.php
+1 namespace Tests\Feature;
+2 
+3 use Tests\TestCase;
+4 use App\Models\Product;
+5 use Illuminate\Foundation\Testing\RefreshDatabase;
+6 
+7 class ProductTest extends TestCase
+8 {
+9     use RefreshDatabase;
+10 
+11     public function test_index_displays_all_products()
+12     {
+13         $products = factory(Product::class, 10)->create();
+14         $response = $this->get('/products');
+15         $response->assertStatus(200);
+16         $response->assertViewIs('products.index');
+17         $response->assertViewHas('products');
+18     }
+19 
+20     public function test_store_creates_new_product()
+21     {
+22         $response = $this->post('/products', [
+23             'name' => 'Test Product',
+24             'description' => 'This is a test product',
+25             'price' => 10.99,
+26         ]);
+27         $response->assertRedirect('/products');
+28         $this->assertCount(1, Product::all());
+29     }
+30 }
+
+File: tests/Unit/ProductUnitTest.php
+1 namespace Tests\Unit;
+2 
+3 use Tests\TestCase;
+4 use App\Models\Product;
+5 
+6 class ProductUnitTest extends TestCase
+7 {
+8     public function test_product_has_name_description_and_price()
+9     {
+10         $product = new Product();
+11         $product->name = 'Test Product';
+12         $product->description = 'This is a test product';
+13         $product->price = 10.99;
+14         $this->assertEquals('Test Product', $product->name);
+15         $this->assertEquals('This is a test product', $product->description);
+16         $this->assertEquals(10.99, $product->price);
+17     }
+18 }
+
+```
+
+================================== Ai Message ==================================
+
+Here is the Unix script that installs dependencies and runs the necessary parts of the codebase:
+```
+#!/bin/bash
+
+# Install dependencies
+composer install
+npm install
+
+# Run database migrations
+php artisan migrate
+
+# Run database seeder
+php artisan db:seed
+
+# Run tests
+php artisan test
+```
+Note: This script assumes that you are running it from the root directory of the project.
